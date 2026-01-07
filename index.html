@@ -71,12 +71,13 @@
     <div class="container">
         <h1>📸 Fotolicht</h1>
         <div id="status-bar">Synchronisiere...</div>
-        <div id="forecast">Lade Daten für Augsburg...</div>
+        <div id="forecast">Lade Daten für Stadtbergen...</div>
     </div>
 
     <script>
-        let lat = 48.3705; 
-        let lng = 10.8978;
+        // Standardmäßig Stadtbergen Koordinaten
+        let lat = 48.3631; 
+        let lng = 10.8444;
 
         function fT(dateObj) {
             return dateObj.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
@@ -144,24 +145,27 @@
             }
         }
 
+        // Zuerst sofort Stadtbergen laden
+        document.getElementById('status-bar').innerHTML = "📍 Stadtbergen (Standard)";
+        loadData(lat, lng);
+
+        // Danach versuchen GPS-Daten zu erhalten
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (p) => {
                     lat = p.coords.latitude; lng = p.coords.longitude;
                     document.getElementById('status-bar').innerHTML = `📍 GPS AKTIV <span class="coords">${lat.toFixed(4)} / ${lng.toFixed(4)}</span>`;
                     document.getElementById('status-bar').classList.add('gps-active');
+                    // Nur neu laden, wenn GPS erfolgreich
                     loadData(lat, lng);
                 },
                 () => {
-                    document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Nutze Augsburg Standard";
-                    loadData(lat, lng);
-                }
+                    // Falls GPS abgelehnt/Fehler, bleibt es bei Stadtbergen
+                    document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
+                },
+                { timeout: 5000 }
             );
-        } else {
-            loadData(lat, lng);
         }
     </script>
 </body>
-
 </html>
-
