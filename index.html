@@ -41,9 +41,7 @@
             text-align: center; font-size: 0.85rem; padding: 8px; margin-bottom: 20px;
             border-radius: 12px; background: #2c2c2e; border: 1px solid #3a3a3c;
         }
-        /* Wenn GPS aktiv ist, wird der Text und der Rahmen grün */
         .gps-active { border-color: #28a745 !important; color: #28a745 !important; }
-        
         .day-card { 
             background: var(--card); border-radius: 16px; padding: 18px; 
             margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
@@ -71,7 +69,7 @@
 <body>
     <div class="container">
         <h1>📸 Fotolicht</h1>
-        <div id="status-bar">Synchronisiere...</div>
+        <div id="status-bar">Suche GPS...</div>
         <div id="forecast">Lade Daten...</div>
     </div>
 
@@ -141,38 +139,45 @@
             }
         }
 
-        // 1. Initialer Zustand: Stadtbergen aktiv (Warn-Icon / Grau)
-        document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
-        loadData(lastLat, lastLng);
-
-        // 2. Kontinuierliche GPS-Überwachung
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(
-                (p) => {
-                    const newLat = p.coords.latitude;
-                    const newLng = p.coords.longitude;
-
-                    // Nur neu laden, wenn sich die Position signifikant geändert hat
-                    if (!isGpsActive || Math.abs(newLat - lastLat) > 0.005 || Math.abs(newLng - lastLng) > 0.005) {
-                        lastLat = newLat;
-                        lastLng = newLng;
-                        isGpsActive = true;
-                        
-                        // Hier wird die Klasse hinzugefügt, die alles grün macht
-                        document.getElementById('status-bar').classList.add('gps-active');
-                        document.getElementById('status-bar').innerHTML = `🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`;
-                        loadData(lastLat, lastLng);
-                    }
-                },
-                () => {
-                    if (!isGpsActive) {
-                        document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
-                        document.getElementById('status-bar').classList.remove('gps-active');
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
-            );
+        // 1. Sofort Stadtbergen laden
+        function setInitialMode() {
+            document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
+            document.getElementById('status-bar').classList.remove('gps-active');
+            loadData(lastLat, lastLng);
         }
+
+        setInitialMode();
+
+        // 2. Kontinuierliche Prüfung
+        function startTracking() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(
+                    (p) => {
+                        const newLat = p.coords.latitude;
+                        const newLng = p.coords.longitude;
+
+                        // Wenn GPS verfügbar wird oder sich die Position signifikant ändert
+                        if (!isGpsActive || Math.abs(newLat - lastLat) > 0.005 || Math.abs(newLng - lastLng) > 0.005) {
+                            lastLat = newLat;
+                            lastLng = newLng;
+                            isGpsActive = true;
+                            
+                            document.getElementById('status-bar').classList.add('gps-active');
+                            document.getElementById('status-bar').innerHTML = `🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`;
+                            loadData(lastLat, lastLng);
+                        }
+                    },
+                    (error) => {
+                        // Falls GPS deaktiviert wird, zurück zu Stadtbergen
+                        isGpsActive = false;
+                        setInitialMode();
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            }
+        }
+
+        startTracking();
     </script>
 </body>
 </html>
