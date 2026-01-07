@@ -35,7 +35,6 @@
         #status-bar { 
             text-align: center; font-size: 0.85rem; padding: 8px; margin-bottom: 20px;
             border-radius: 12px; background: #2c2c2e; border: 1px solid #3a3a3c;
-            transition: all 0.3s ease;
         }
         .gps-active { border-color: #28a745 !important; color: #28a745 !important; }
         .day-card { 
@@ -65,18 +64,16 @@
 <body>
     <div class="container">
         <h1>📸 Fotolicht</h1>
-        <div id="status-bar">Suche GPS...</div>
+        <div id="status-bar">Initialisiere...</div>
         <div id="forecast">Lade Daten...</div>
     </div>
 
     <script>
-        // Startwerte Stadtbergen
         const stdLat = 48.3631; 
         const stdLng = 10.8444;
         let lastLat = stdLat;
         let lastLng = stdLng;
         let isGpsActive = false;
-        let lastGpsUpdate = 0;
 
         function fT(dateObj) {
             return dateObj.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
@@ -89,98 +86,98 @@
                 const date = new Date();
                 date.setDate(date.getDate() + i);
                 const dStr = date.toISOString().split('T')[0];
-                const r = await fetch(`https://api.sunrise-sunset.org/json?lat=${lta}&lng=${lgn}&date=${dStr}&formatted=0`);
-                const j = await r.json();
-                const s = j.results;
+                try {
+                    const r = await fetch(`https://api.sunrise-sunset.org/json?lat=${lta}&lng=${lgn}&date=${dStr}&formatted=0`);
+                    const j = await r.json();
+                    const s = j.results;
 
-                const sunrise = new Date(s.sunrise);
-                const sunset = new Date(s.sunset);
-                const civilBegin = new Date(s.civil_twilight_begin);
-                const civilEnd = new Date(s.civil_twilight_end);
-                
-                const morningGoldStart = new Date(sunrise.getTime() - 15 * 60000);
-                const morningGoldEnd = new Date(sunrise.getTime() + 40 * 60000);
-                const morningBlueEnd = morningGoldStart;
+                    const sunrise = new Date(s.sunrise);
+                    const sunset = new Date(s.sunset);
+                    const civilBegin = new Date(s.civil_twilight_begin);
+                    const civilEnd = new Date(s.civil_twilight_end);
+                    
+                    const morningGoldStart = new Date(sunrise.getTime() - 15 * 60000);
+                    const morningGoldEnd = new Date(sunrise.getTime() + 40 * 60000);
+                    const morningBlueEnd = morningGoldStart;
 
-                const eveningGoldStart = new Date(sunset.getTime() - 50 * 60000);
-                const eveningBlueStart = new Date(sunset.getTime() + 15 * 60000);
+                    const eveningGoldStart = new Date(sunset.getTime() - 50 * 60000);
+                    const eveningBlueStart = new Date(sunset.getTime() + 15 * 60000);
 
-                const dayLabel = i === 0 ? "Heute" : date.toLocaleDateString('de-DE', {weekday: 'long', day: '2-digit', month: '2-digit'});
+                    const dayLabel = i === 0 ? "Heute" : date.toLocaleDateString('de-DE', {weekday: 'long', day: '2-digit', month: '2-digit'});
 
-                div.innerHTML += `
-                    <div class="day-card">
-                        <div class="date-header">${dayLabel}</div>
-                        <div class="section-title">Vormittag</div>
-                        <div class="grid">
-                            <div class="phase" style="border-color: var(--blue)">
-                                <span class="label-blue">🏙️ Blau</span>
-                                <span class="time-range">${fT(civilBegin)} - ${fT(morningBlueEnd)}</span>
+                    div.innerHTML += `
+                        <div class="day-card">
+                            <div class="date-header">${dayLabel}</div>
+                            <div class="section-title">Vormittag</div>
+                            <div class="grid">
+                                <div class="phase" style="border-color: var(--blue)">
+                                    <span class="label-blue">🏙️ Blau</span>
+                                    <span class="time-range">${fT(civilBegin)} - ${fT(morningBlueEnd)}</span>
+                                </div>
+                                <div class="phase" style="border-color: var(--gold)">
+                                    <span class="label-gold">🌅 Gold</span>
+                                    <span class="time-range">${fT(morningGoldStart)} - ${fT(morningGoldEnd)}</span>
+                                </div>
                             </div>
-                            <div class="phase" style="border-color: var(--gold)">
-                                <span class="label-gold">🌅 Gold</span>
-                                <span class="time-range">${fT(morningGoldStart)} - ${fT(morningGoldEnd)}</span>
+                            <div class="section-title">Nachmittag</div>
+                            <div class="grid">
+                                <div class="phase" style="border-color: var(--gold)">
+                                    <span class="label-gold">🌅 Gold</span>
+                                    <span class="time-range">${fT(eveningGoldStart)} - ${fT(sunset)}</span>
+                                </div>
+                                <div class="phase" style="border-color: var(--blue)">
+                                    <span class="label-blue">🏙️ Blau</span>
+                                    <span class="time-range">${fT(eveningBlueStart)} - ${fT(civilEnd)}</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="section-title">Nachmittag</div>
-                        <div class="grid">
-                            <div class="phase" style="border-color: var(--gold)">
-                                <span class="label-gold">🌅 Gold</span>
-                                <span class="time-range">${fT(eveningGoldStart)} - ${fT(sunset)}</span>
-                            </div>
-                            <div class="phase" style="border-color: var(--blue)">
-                                <span class="label-blue">🏙️ Blau</span>
-                                <span class="time-range">${fT(eveningBlueStart)} - ${fT(civilEnd)}</span>
-                            </div>
-                        </div>
-                    </div>`;
+                        </div>`;
+                } catch(e) { console.log("Fehler beim Laden"); }
             }
         }
 
-        function setFallbackMode() {
-            if (isGpsActive || lastLat !== stdLat) {
-                isGpsActive = false;
-                lastLat = stdLat;
-                lastLng = stdLng;
-                document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
-                document.getElementById('status-bar').classList.remove('gps-active');
-                loadData(lastLat, lastLng);
+        function setFallback() {
+            isGpsActive = false;
+            lastLat = stdLat;
+            lastLng = stdLng;
+            document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
+            document.getElementById('status-bar').classList.remove('gps-active');
+            loadData(lastLat, lastLng);
+        }
+
+        function updateLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (p) => {
+                        const newLat = p.coords.latitude;
+                        const newLng = p.coords.longitude;
+
+                        // Nur bei Änderung > 500m neu laden
+                        if (!isGpsActive || Math.abs(newLat - lastLat) > 0.005 || Math.abs(newLng - lastLng) > 0.005) {
+                            lastLat = newLat;
+                            lastLng = newLng;
+                            isGpsActive = true;
+                            document.getElementById('status-bar').classList.add('gps-active');
+                            document.getElementById('status-bar').innerHTML = `🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`;
+                            loadData(lastLat, lastLng);
+                        }
+                        // Nächste Prüfung in 10 Sekunden
+                        setTimeout(updateLocation, 10000);
+                    },
+                    (error) => {
+                        setFallback();
+                        // Trotz Fehler in 10 Sek erneut versuchen (falls GPS wieder eingeschaltet wird)
+                        setTimeout(updateLocation, 10000);
+                    },
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                );
+            } else {
+                setFallback();
             }
         }
 
-        // 1. Start mit Stadtbergen
-        document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
-        loadData(lastLat, lastLng);
-
-        // 2. Kontinuierliche Überwachung
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(
-                (p) => {
-                    const newLat = p.coords.latitude;
-                    const newLng = p.coords.longitude;
-                    lastGpsUpdate = Date.now(); // Zeitstempel merken
-
-                    if (!isGpsActive || Math.abs(newLat - lastLat) > 0.005 || Math.abs(newLng - lastLng) > 0.005) {
-                        lastLat = newLat;
-                        lastLng = newLng;
-                        isGpsActive = true;
-                        document.getElementById('status-bar').classList.add('gps-active');
-                        document.getElementById('status-bar').innerHTML = `🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`;
-                        loadData(lastLat, lastLng);
-                    }
-                },
-                () => { setFallbackMode(); },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-
-            // 3. Sicherheits-Check alle 15 Sekunden: Wenn kein GPS-Update mehr kam -> Fallback
-            setInterval(() => {
-                const now = Date.now();
-                if (isGpsActive && (now - lastGpsUpdate > 20000)) { // Mehr als 20 Sek kein Signal
-                    setFallbackMode();
-                }
-            }, 15000);
-        }
+        // Startvorgang
+        setFallback(); // Sofort Stadtbergen zeigen
+        updateLocation(); // Erste GPS-Prüfung anstoßen
     </script>
 </body>
 </html>
-
