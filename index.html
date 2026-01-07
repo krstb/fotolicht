@@ -14,7 +14,6 @@
     <link rel="apple-touch-icon" href="icon-192.png">
 
     <script>
-      // Service Worker Registrierung
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('sw.js')
@@ -24,11 +23,7 @@
     </script>
     
     <style>
-/* Fix für PWA-Ränder und den blauen Balken */
-        html {
-            background-color: #000000 !important;
-        }
-        
+        html { background-color: #000000 !important; }
         :root { --gold: #ffcc00; --blue: #5599ff; --bg: #0f0f0f; --card: #1c1c1e; }
         body { 
             font-family: 'Segoe UI', system-ui, sans-serif; 
@@ -40,6 +35,7 @@
         #status-bar { 
             text-align: center; font-size: 0.85rem; padding: 8px; margin-bottom: 20px;
             border-radius: 12px; background: #2c2c2e; border: 1px solid #3a3a3c;
+            transition: all 0.3s ease;
         }
         .gps-active { border-color: #28a745 !important; color: #28a745 !important; }
         .day-card { 
@@ -75,9 +71,12 @@
 
     <script>
         // Startwerte Stadtbergen
-        let lastLat = 48.3631; 
-        let lastLng = 10.8444;
+        const stdLat = 48.3631; 
+        const stdLng = 10.8444;
+        let lastLat = stdLat;
+        let lastLng = stdLng;
         let isGpsActive = false;
+        let lastGpsUpdate = 0;
 
         function fT(dateObj) {
             return dateObj.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
@@ -111,7 +110,6 @@
                 div.innerHTML += `
                     <div class="day-card">
                         <div class="date-header">${dayLabel}</div>
-                        
                         <div class="section-title">Vormittag</div>
                         <div class="grid">
                             <div class="phase" style="border-color: var(--blue)">
@@ -123,7 +121,6 @@
                                 <span class="time-range">${fT(morningGoldStart)} - ${fT(morningGoldEnd)}</span>
                             </div>
                         </div>
-
                         <div class="section-title">Nachmittag</div>
                         <div class="grid">
                             <div class="phase" style="border-color: var(--gold)">
@@ -139,45 +136,51 @@
             }
         }
 
-        // 1. Sofort Stadtbergen laden
-        function setInitialMode() {
-            document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
-            document.getElementById('status-bar').classList.remove('gps-active');
-            loadData(lastLat, lastLng);
-        }
-
-        setInitialMode();
-
-        // 2. Kontinuierliche Prüfung
-        function startTracking() {
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(
-                    (p) => {
-                        const newLat = p.coords.latitude;
-                        const newLng = p.coords.longitude;
-
-                        // Wenn GPS verfügbar wird oder sich die Position signifikant ändert
-                        if (!isGpsActive || Math.abs(newLat - lastLat) > 0.005 || Math.abs(newLng - lastLng) > 0.005) {
-                            lastLat = newLat;
-                            lastLng = newLng;
-                            isGpsActive = true;
-                            
-                            document.getElementById('status-bar').classList.add('gps-active');
-                            document.getElementById('status-bar').innerHTML = `🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`;
-                            loadData(lastLat, lastLng);
-                        }
-                    },
-                    (error) => {
-                        // Falls GPS deaktiviert wird, zurück zu Stadtbergen
-                        isGpsActive = false;
-                        setInitialMode();
-                    },
-                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-                );
+        function setFallbackMode() {
+            if (isGpsActive || lastLat !== stdLat) {
+                isGpsActive = false;
+                lastLat = stdLat;
+                lastLng = stdLng;
+                document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
+                document.getElementById('status-bar').classList.remove('gps-active');
+                loadData(lastLat, lastLng);
             }
         }
 
-        startTracking();
+        // 1. Start mit Stadtbergen
+        document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
+        loadData(lastLat, lastLng);
+
+        // 2. Kontinuierliche Überwachung
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                (p) => {
+                    const newLat = p.coords.latitude;
+                    const newLng = p.coords.longitude;
+                    lastGpsUpdate = Date.now(); // Zeitstempel merken
+
+                    if (!isGpsActive || Math.abs(newLat - lastLat) > 0.005 || Math.abs(newLng - lastLng) > 0.005) {
+                        lastLat = newLat;
+                        lastLng = newLng;
+                        isGpsActive = true;
+                        document.getElementById('status-bar').classList.add('gps-active');
+                        document.getElementById('status-bar').innerHTML = `🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`;
+                        loadData(lastLat, lastLng);
+                    }
+                },
+                () => { setFallbackMode(); },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+
+            // 3. Sicherheits-Check alle 15 Sekunden: Wenn kein GPS-Update mehr kam -> Fallback
+            setInterval(() => {
+                const now = Date.now();
+                if (isGpsActive && (now - lastGpsUpdate > 20000)) { // Mehr als 20 Sek kein Signal
+                    setFallbackMode();
+                }
+            }, 15000);
+        }
     </script>
 </body>
 </html>
+
