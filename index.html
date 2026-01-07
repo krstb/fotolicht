@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo-Planner Pro</title>
+    <style>
+        :root { --gold: #ffcc00; --blue: #5599ff; --bg: #0f0f0f; --card: #1c1c1e; }
+        
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg); color: #efefef; margin: 0; padding: 0;
+            display: flex; justify-content: center; /* Zentrierung auf Desktop */
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px; /* Begrenzung für große Bildschirme */
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 { color: var(--gold); text-align: center; font-size: 1.6rem; margin-bottom: 5px; }
+        
+        #status-bar { 
+            text-align: center; font-size: 0.85rem; padding: 8px; margin-bottom: 20px;
+            border-radius: 12px; background: #2c2c2e; color: #fff;
+            border: 1px solid #3a3a3c;
+        }
+        .gps-active { border-color: #28a745 !important; color: #28a745 !important; }
+
+        .day-card { 
+            background: var(--card); border-radius: 16px; padding: 18px; 
+            margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        .date-header { 
+            font-weight: bold; color: var(--gold); font-size: 1.1rem;
+            border-bottom: 1px solid #333; margin-bottom: 12px; padding-bottom: 8px; 
+        }
+
+        .section-title { 
+            font-size: 0.7rem; color: #888; margin: 15px 0 8px; 
+            text-transform: uppercase; letter-spacing: 1.2px; font-weight: bold;
+        }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        
+        .phase { 
+            background: #2c2c2e; padding: 10px; border-radius: 10px; 
+            font-size: 0.85rem; border: 1px solid #3a3a3c;
+        }
+        
+        .label-blue { color: var(--blue); font-weight: bold; display: block; margin-bottom: 4px; }
+        .label-gold { color: var(--gold); font-weight: bold; display: block; margin-bottom: 4px; }
+        .time { font-family: 'Courier New', monospace; font-size: 1rem; color: white; font-weight: bold; }
+
+        .coords { font-size: 0.7rem; color: #666; display: block; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📸 Photo-Planner</h1>
+        <div id="status-bar">Initialisiere...</div>
+        <div id="forecast">Suche Standort...</div>
+    </div>
+
+    <script>
+        let lat = 48.3705; // Augsburg
+        let lng = 10.8978;
+
+        function fT(iso) {
+            return new Date(iso).toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+        }
+
+        async function loadData(lta, lgn) {
+            const div = document.getElementById('forecast');
+            div.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() + i);
+                const dStr = date.toISOString().split('T')[0];
+                const r = await fetch(`https://api.sunrise-sunset.org/json?lat=${lta}&lng=${lgn}&date=${dStr}&formatted=0`);
+                const j = await r.json();
+                const s = j.results;
+                const day = i === 0 ? "Heute" : date.toLocaleDateString('de-DE', {weekday: 'long', day: '2-digit', month: '2-digit'});
+
+                div.innerHTML += `
+                    <div class="day-card">
+                        <div class="date-header">${day}</div>
+                        <div class="section-title">Morgens</div>
+                        <div class="grid">
+                            <div class="phase"><span class="label-blue">🏙️ Blau</span><span class="time">${fT(s.civil_twilight_begin)}</span></div>
+                            <div class="phase"><span class="label-gold">🌅 Gold</span><span class="time">${fT(s.sunrise)}</span></div>
+                        </div>
+                        <div class="section-title">Abends</div>
+                        <div class="grid">
+                            <div class="phase"><span class="label-gold">🌅 Gold</span><span class="time">${fT(new Date(new Date(s.sunset).getTime() - 50*60000))}</span></div>
+                            <div class="phase"><span class="label-blue">🏙️ Blau</span><span class="time">${fT(s.sunset)}</span></div>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (p) => {
+                    lat = p.coords.latitude; lng = p.coords.longitude;
+                    document.getElementById('status-bar').innerHTML = `📍 GPS AKTIV <span class="coords">${lat.toFixed(4)} / ${lng.toFixed(4)}</span>`;
+                    document.getElementById('status-bar').classList.add('gps-active');
+                    loadData(lat, lng);
+                },
+                () => {
+                    document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Augsburg voreingestellt";
+                    loadData(lat, lng);
+                }
+            );
+        }
+    </script>
+</body>
+</html>
