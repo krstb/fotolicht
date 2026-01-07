@@ -23,7 +23,6 @@
       }
     </script>
     
-    
     <style>
 /* Fix für PWA-Ränder und den blauen Balken */
         html {
@@ -71,13 +70,14 @@
     <div class="container">
         <h1>📸 Fotolicht</h1>
         <div id="status-bar">Synchronisiere...</div>
-        <div id="forecast">Lade Daten für Stadtbergen...</div>
+        <div id="forecast">Lade Daten...</div>
     </div>
 
     <script>
-        // Standardmäßig Stadtbergen Koordinaten
-        let lat = 48.3631; 
-        let lng = 10.8444;
+        // Startwerte Stadtbergen
+        let lastLat = 48.3631; 
+        let lastLng = 10.8444;
+        let isGpsActive = false;
 
         function fT(dateObj) {
             return dateObj.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
@@ -99,17 +99,11 @@
                 const civilBegin = new Date(s.civil_twilight_begin);
                 const civilEnd = new Date(s.civil_twilight_end);
                 
-                // MORGENS SYNC (Tabelle)
-                // Gold beginnt 15 Min vor Aufgang
                 const morningGoldStart = new Date(sunrise.getTime() - 15 * 60000);
                 const morningGoldEnd = new Date(sunrise.getTime() + 40 * 60000);
-                // Blau endet wenn Gold beginnt
                 const morningBlueEnd = morningGoldStart;
 
-                // ABENDS SYNC
-                // Gold endet mit Untergang
                 const eveningGoldStart = new Date(sunset.getTime() - 50 * 60000);
-                // Blau beginnt ca 15 Min nach Untergang (wenn Himmel tiefblau wird)
                 const eveningBlueStart = new Date(sunset.getTime() + 15 * 60000);
 
                 const dayLabel = i === 0 ? "Heute" : date.toLocaleDateString('de-DE', {weekday: 'long', day: '2-digit', month: '2-digit'});
@@ -145,27 +139,37 @@
             }
         }
 
-        // Zuerst sofort Stadtbergen laden
+        // 1. Sofort Stadtbergen laden
         document.getElementById('status-bar').innerHTML = "📍 Stadtbergen (Standard)";
-        loadData(lat, lng);
+        loadData(lastLat, lastLng);
 
-        // Danach versuchen GPS-Daten zu erhalten
+        // 2. Kontinuierliche GPS-Überwachung
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
+            navigator.geolocation.watchPosition(
                 (p) => {
-                    lat = p.coords.latitude; lng = p.coords.longitude;
-                    document.getElementById('status-bar').innerHTML = `📍 GPS AKTIV <span class="coords">${lat.toFixed(4)} / ${lng.toFixed(4)}</span>`;
-                    document.getElementById('status-bar').classList.add('gps-active');
-                    // Nur neu laden, wenn GPS erfolgreich
-                    loadData(lat, lng);
+                    const newLat = p.coords.latitude;
+                    const newLng = p.coords.longitude;
+
+                    // Nur neu laden, wenn sich die Position signifikant geändert hat (ca. 500m)
+                    if (!isGpsActive || Math.abs(newLat - lastLat) > 0.005 || Math.abs(newLng - lastLng) > 0.005) {
+                        lastLat = newLat;
+                        lastLng = newLng;
+                        isGpsActive = true;
+                        
+                        document.getElementById('status-bar').innerHTML = `📍 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`;
+                        document.getElementById('status-bar').classList.add('gps-active');
+                        loadData(lastLat, lastLng);
+                    }
                 },
                 () => {
-                    // Falls GPS abgelehnt/Fehler, bleibt es bei Stadtbergen
-                    document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
+                    if (!isGpsActive) {
+                        document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
+                    }
                 },
-                { timeout: 5000 }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
             );
         }
     </script>
 </body>
 </html>
+
