@@ -74,7 +74,7 @@
         let lastLat = stdLat;
         let lastLng = stdLng;
         let isGpsActive = false;
-        let gpsAttemptCount = 0;
+        let lastUpdateTimestamp = 0;
 
         function fT(dateObj) {
             return dateObj.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
@@ -132,17 +132,19 @@
                                 </div>
                             </div>
                         </div>`;
-                } catch(e) { console.log("Fehler API"); }
+                } catch(e) { console.log("API Fehler"); }
             }
         }
 
         function setFallback() {
-            isGpsActive = false;
-            lastLat = stdLat;
-            lastLng = stdLng;
-            document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
-            document.getElementById('status-bar').classList.remove('gps-active');
-            loadData(lastLat, lastLng);
+            if (isGpsActive || document.getElementById('status-bar').innerText.includes("Suche")) {
+                isGpsActive = false;
+                lastLat = stdLat;
+                lastLng = stdLng;
+                document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
+                document.getElementById('status-bar').classList.remove('gps-active');
+                loadData(lastLat, lastLng);
+            }
         }
 
         function updateLocation() {
@@ -151,7 +153,7 @@
                     (p) => {
                         const newLat = p.coords.latitude;
                         const newLng = p.coords.longitude;
-                        gpsAttemptCount = 0;
+                        lastUpdateTimestamp = Date.now();
 
                         if (!isGpsActive || Math.abs(newLat - lastLat) > 0.005 || Math.abs(newLng - lastLng) > 0.005) {
                             lastLat = newLat;
@@ -164,23 +166,27 @@
                         setTimeout(updateLocation, 10000);
                     },
                     (error) => {
-                        gpsAttemptCount++;
-                        // Erst nach 2 Versuchen (ca. 6 Sek) den Warnhinweis zeigen, falls noch nie GPS aktiv war
-                        if (!isGpsActive && gpsAttemptCount > 1) {
-                            setFallback();
-                        }
+                        // Wenn GPS explizit ausgeschaltet wurde oder ein Fehler auftritt
+                        setFallback();
                         setTimeout(updateLocation, 10000);
                     },
-                    { enableHighAccuracy: true, timeout: 3000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
                 );
             } else {
                 setFallback();
             }
         }
 
-        // Sofort mit Stadtbergen im Hintergrund laden, aber Status "Suche..." zeigen
-        loadData(stdLat, stdLng);
-        updateLocation();
+        // 3. Sicherheits-Check: Wenn GPS im Browser "hängt" und keine neuen Daten liefert
+        setInterval(() => {
+            if (isGpsActive && (Date.now() - lastUpdateTimestamp > 25000)) {
+                setFallback();
+            }
+        }, 15000);
+
+        // Initialer Start
+        loadData(stdLat, stdLng); // Stadtbergen im Hintergrund laden
+        updateLocation(); // GPS-Schleife starten
     </script>
 </body>
 </html>
