@@ -64,7 +64,7 @@
 <body>
     <div class="container">
         <h1>📸 Fotolicht</h1>
-        <div id="status-bar">Initialisiere...</div>
+        <div id="status-bar">🛰️ Suche GPS...</div>
         <div id="forecast">Lade Daten...</div>
     </div>
 
@@ -74,6 +74,7 @@
         let lastLat = stdLat;
         let lastLng = stdLng;
         let isGpsActive = false;
+        let gpsAttemptCount = 0;
 
         function fT(dateObj) {
             return dateObj.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
@@ -131,7 +132,7 @@
                                 </div>
                             </div>
                         </div>`;
-                } catch(e) { console.log("Fehler beim Laden"); }
+                } catch(e) { console.log("Fehler API"); }
             }
         }
 
@@ -150,8 +151,8 @@
                     (p) => {
                         const newLat = p.coords.latitude;
                         const newLng = p.coords.longitude;
+                        gpsAttemptCount = 0;
 
-                        // Nur bei Änderung > 500m neu laden
                         if (!isGpsActive || Math.abs(newLat - lastLat) > 0.005 || Math.abs(newLng - lastLng) > 0.005) {
                             lastLat = newLat;
                             lastLng = newLng;
@@ -160,24 +161,26 @@
                             document.getElementById('status-bar').innerHTML = `🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`;
                             loadData(lastLat, lastLng);
                         }
-                        // Nächste Prüfung in 10 Sekunden
                         setTimeout(updateLocation, 10000);
                     },
                     (error) => {
-                        setFallback();
-                        // Trotz Fehler in 10 Sek erneut versuchen (falls GPS wieder eingeschaltet wird)
+                        gpsAttemptCount++;
+                        // Erst nach 2 Versuchen (ca. 6 Sek) den Warnhinweis zeigen, falls noch nie GPS aktiv war
+                        if (!isGpsActive && gpsAttemptCount > 1) {
+                            setFallback();
+                        }
                         setTimeout(updateLocation, 10000);
                     },
-                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 3000, maximumAge: 0 }
                 );
             } else {
                 setFallback();
             }
         }
 
-        // Startvorgang
-        setFallback(); // Sofort Stadtbergen zeigen
-        updateLocation(); // Erste GPS-Prüfung anstoßen
+        // Sofort mit Stadtbergen im Hintergrund laden, aber Status "Suche..." zeigen
+        loadData(stdLat, stdLng);
+        updateLocation();
     </script>
 </body>
 </html>
