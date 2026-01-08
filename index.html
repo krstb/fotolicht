@@ -68,7 +68,7 @@
         <div id="forecast">Lade Daten...</div>
     </div>
 
-    <script>
+        <script>
         const stdLat = 48.3631; 
         const stdLng = 10.8444;
         let lastLat = stdLat;
@@ -82,58 +82,72 @@
 
         async function loadData(lta, lgn) {
             const div = document.getElementById('forecast');
-            div.innerHTML = '';
+            const fetchPromises = [];
+
+            // Erstelle alle API-Anfragen gleichzeitig
             for (let i = 0; i < 6; i++) {
                 const date = new Date();
                 date.setDate(date.getDate() + i);
                 const dStr = date.toISOString().split('T')[0];
-                try {
-                    const r = await fetch(`https://api.sunrise-sunset.org/json?lat=${lta}&lng=${lgn}&date=${dStr}&formatted=0`);
-                    const j = await r.json();
-                    const s = j.results;
-
-                    const sunrise = new Date(s.sunrise);
-                    const sunset = new Date(s.sunset);
-                    const civilBegin = new Date(s.civil_twilight_begin);
-                    const civilEnd = new Date(s.civil_twilight_end);
-                    
-                    const morningGoldStart = new Date(sunrise.getTime() - 15 * 60000);
-                    const morningGoldEnd = new Date(sunrise.getTime() + 40 * 60000);
-                    const morningBlueEnd = morningGoldStart;
-
-                    const eveningGoldStart = new Date(sunset.getTime() - 50 * 60000);
-                    const eveningBlueStart = new Date(sunset.getTime() + 15 * 60000);
-
-                    const dayLabel = i === 0 ? "Heute" : date.toLocaleDateString('de-DE', {weekday: 'long', day: '2-digit', month: '2-digit'});
-
-                    div.innerHTML += `
-                        <div class="day-card">
-                            <div class="date-header">${dayLabel}</div>
-                            <div class="section-title">Vormittag</div>
-                            <div class="grid">
-                                <div class="phase" style="border-color: var(--blue)">
-                                    <span class="label-blue">🏙️ Blau</span>
-                                    <span class="time-range">${fT(civilBegin)} - ${fT(morningBlueEnd)}</span>
-                                </div>
-                                <div class="phase" style="border-color: var(--gold)">
-                                    <span class="label-gold">🌅 Gold</span>
-                                    <span class="time-range">${fT(morningGoldStart)} - ${fT(morningGoldEnd)}</span>
-                                </div>
-                            </div>
-                            <div class="section-title">Nachmittag</div>
-                            <div class="grid">
-                                <div class="phase" style="border-color: var(--gold)">
-                                    <span class="label-gold">🌅 Gold</span>
-                                    <span class="time-range">${fT(eveningGoldStart)} - ${fT(sunset)}</span>
-                                </div>
-                                <div class="phase" style="border-color: var(--blue)">
-                                    <span class="label-blue">🏙️ Blau</span>
-                                    <span class="time-range">${fT(eveningBlueStart)} - ${fT(civilEnd)}</span>
-                                </div>
-                            </div>
-                        </div>`;
-                } catch(e) { console.log("API Fehler"); }
+                const dayLabel = i === 0 ? "Heute" : date.toLocaleDateString('de-DE', {weekday: 'long', day: '2-digit', month: '2-digit'});
+                
+                const promise = fetch(`https://api.sunrise-sunset.org/json?lat=${lta}&lng=${lgn}&date=${dStr}&formatted=0`)
+                    .then(r => r.json())
+                    .then(j => ({ label: dayLabel, results: j.results }))
+                    .catch(e => { console.log("API Fehler bei Tag " + i); return null; });
+                
+                fetchPromises.push(promise);
             }
+
+            // Warte auf alle Ergebnisse
+            const results = await Promise.all(fetchPromises);
+            
+            // Erst jetzt das UI leeren und in der richtigen Reihenfolge füllen
+            div.innerHTML = '';
+            
+            results.forEach(dayData => {
+                if (!dayData || !dayData.results) return;
+                
+                const s = dayData.results;
+                const sunrise = new Date(s.sunrise);
+                const sunset = new Date(s.sunset);
+                const civilBegin = new Date(s.civil_twilight_begin);
+                const civilEnd = new Date(s.civil_twilight_end);
+                
+                const morningGoldStart = new Date(sunrise.getTime() - 15 * 60000);
+                const morningGoldEnd = new Date(sunrise.getTime() + 40 * 60000);
+                const morningBlueEnd = morningGoldStart;
+
+                const eveningGoldStart = new Date(sunset.getTime() - 50 * 60000);
+                const eveningBlueStart = new Date(sunset.getTime() + 15 * 60000);
+
+                div.innerHTML += `
+                    <div class="day-card">
+                        <div class="date-header">${dayData.label}</div>
+                        <div class="section-title">Vormittag</div>
+                        <div class="grid">
+                            <div class="phase" style="border-color: var(--blue)">
+                                <span class="label-blue">🏙️ Blau</span>
+                                <span class="time-range">${fT(civilBegin)} - ${fT(morningBlueEnd)}</span>
+                            </div>
+                            <div class="phase" style="border-color: var(--gold)">
+                                <span class="label-gold">🌅 Gold</span>
+                                <span class="time-range">${fT(morningGoldStart)} - ${fT(morningGoldEnd)}</span>
+                            </div>
+                        </div>
+                        <div class="section-title">Nachmittag</div>
+                        <div class="grid">
+                            <div class="phase" style="border-color: var(--gold)">
+                                <span class="label-gold">🌅 Gold</span>
+                                <span class="time-range">${fT(eveningGoldStart)} - ${fT(sunset)}</span>
+                            </div>
+                            <div class="phase" style="border-color: var(--blue)">
+                                <span class="label-blue">🏙️ Blau</span>
+                                <span class="time-range">${fT(eveningBlueStart)} - ${fT(civilEnd)}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            });
         }
 
         function setFallback() {
@@ -166,7 +180,6 @@
                         setTimeout(updateLocation, 10000);
                     },
                     (error) => {
-                        // Wenn GPS explizit ausgeschaltet wurde oder ein Fehler auftritt
                         setFallback();
                         setTimeout(updateLocation, 10000);
                     },
@@ -177,16 +190,15 @@
             }
         }
 
-        // 3. Sicherheits-Check: Wenn GPS im Browser "hängt" und keine neuen Daten liefert
         setInterval(() => {
             if (isGpsActive && (Date.now() - lastUpdateTimestamp > 25000)) {
                 setFallback();
             }
         }, 15000);
 
-        // Initialer Start
-        loadData(stdLat, stdLng); // Stadtbergen im Hintergrund laden
-        updateLocation(); // GPS-Schleife starten
+        loadData(stdLat, stdLng);
+        updateLocation();
     </script>
-</body>
+
 </html>
+
