@@ -35,9 +35,12 @@
         #status-bar { 
             text-align: center; font-size: 0.85rem; padding: 8px; margin-bottom: 20px;
             border-radius: 12px; background: #2c2c2e; border: 1px solid #3a3a3c;
-            line-height: 1.4;
+            line-height: 1.4; transition: all 0.3s ease;
         }
+        /* Layout-Klassen für die Status-Zustände */
         .gps-active { border-color: #28a745 !important; color: #28a745 !important; }
+        .gps-fallback { border-color: #dc3545 !important; color: #dc3545 !important; }
+
         .day-card { 
             background: var(--card); border-radius: 16px; padding: 18px; 
             margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
@@ -66,7 +69,7 @@
 <body>
     <div class="container">
         <h1>📸 Fotolicht</h1>
-        <div id="status-bar">🛰️ Suche GPS...</div>
+        <div id="status-bar" class="gps-fallback">🔴 STADTBERGEN <span class="coords">48.3631 / 10.8444</span></div>
         <div id="forecast">Lade Daten...</div>
     </div>
 
@@ -86,7 +89,12 @@
 
         if (savedHtml) {
             document.getElementById('forecast').innerHTML = savedHtml;
-            updateStatusDisplay("Suche GPS...", true);
+            // Falls GPS-Koordinaten im Cache sind, zeigen wir "Suche...", sonst Stadtbergen-Layout
+            if (savedCoords) {
+                updateStatusDisplay(`🛰️ Suche GPS... <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, true);
+            } else {
+                updateStatusDisplay(`🔴 STADTBERGEN <span class="coords">${stdLat} / ${stdLng}</span>`, true);
+            }
         }
 
         function updateStatusDisplay(mainText, showCacheHint) {
@@ -177,20 +185,20 @@
                 if (isGpsActive) {
                     updateStatusDisplay(`🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, false);
                 } else {
-                    updateStatusDisplay("🛰️ Suche GPS...", false);
+                    updateStatusDisplay(`🔴 STADTBERGEN <span class="coords">${stdLat} / ${stdLng}</span>`, false);
                 }
             }
         }
 
         function setFallback() {
-            if (isGpsActive || document.getElementById('status-bar').innerText.includes("Suche")) {
-                isGpsActive = false;
-                lastLat = stdLat;
-                lastLng = stdLng;
-                document.getElementById('status-bar').classList.remove('gps-active');
-                updateStatusDisplay("⚠️ GPS aus - Stadtbergen aktiv", false);
-                loadData(lastLat, lastLng);
-            }
+            isGpsActive = false;
+            lastLat = stdLat;
+            lastLng = stdLng;
+            const sBar = document.getElementById('status-bar');
+            sBar.classList.remove('gps-active');
+            sBar.classList.add('gps-fallback');
+            updateStatusDisplay(`🔴 STADTBERGEN <span class="coords">${stdLat} / ${stdLng}</span>`, false);
+            loadData(lastLat, lastLng);
         }
 
         function updateLocation() {
@@ -208,7 +216,9 @@
                             
                             localStorage.setItem('fotolicht_coords', JSON.stringify({ lat: lastLat, lng: lastLng }));
 
-                            document.getElementById('status-bar').classList.add('gps-active');
+                            const sBar = document.getElementById('status-bar');
+                            sBar.classList.remove('gps-fallback');
+                            sBar.classList.add('gps-active');
                             updateStatusDisplay(`🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, true);
                             loadData(lastLat, lastLng);
                         }
@@ -225,14 +235,10 @@
             }
         }
 
-        // Intervall für GPS-Timeout UND Internet-Retry
         setInterval(() => {
-            // 1. GPS Timeout Prüfung
             if (isGpsActive && (Date.now() - lastUpdateTimestamp > 25000)) {
                 setFallback();
             }
-            
-            // 2. Internet-Retry: Falls noch keine Live-Daten da sind, erneut versuchen
             if (!isDataLive) {
                 loadData(lastLat, lastLng);
             }
@@ -243,4 +249,3 @@
     </script>
 </body>
 </html>
-
