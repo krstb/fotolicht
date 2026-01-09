@@ -74,7 +74,6 @@
         const stdLat = 48.3631; 
         const stdLng = 10.8444;
 
-        // Position und Cache aus LocalStorage laden
         const savedCoords = localStorage.getItem('fotolicht_coords');
         const initialCoords = savedCoords ? JSON.parse(savedCoords) : { lat: stdLat, lng: stdLng };
         const savedHtml = localStorage.getItem('fotolicht_cache_html');
@@ -83,15 +82,13 @@
         let lastLng = initialCoords.lng;
         let isGpsActive = false;
         let lastUpdateTimestamp = 0;
-        let isDataLive = false; // Tracker für Live-Daten
+        let isDataLive = false; 
 
-        // Falls alter HTML-Content existiert, diesen sofort anzeigen
         if (savedHtml) {
             document.getElementById('forecast').innerHTML = savedHtml;
             updateStatusDisplay("Suche GPS...", true);
         }
 
-        // Hilfsfunktion für kombinierte Statusanzeige
         function updateStatusDisplay(mainText, showCacheHint) {
             const statusDiv = document.getElementById('status-bar');
             let html = mainText;
@@ -126,8 +123,11 @@
             const results = await Promise.all(fetchPromises);
             
             let newHtml = '';
+            let successCount = 0;
+
             results.forEach(dayData => {
                 if (!dayData || !dayData.results) return;
+                successCount++;
                 
                 const s = dayData.results;
                 const sunrise = new Date(s.sunrise);
@@ -170,13 +170,14 @@
                     </div>`;
             });
 
-            if (newHtml !== '') {
+            if (successCount > 0) {
                 div.innerHTML = newHtml;
                 localStorage.setItem('fotolicht_cache_html', newHtml);
                 isDataLive = true;
-                // Status-Anzeige aktualisieren, um Cache-Hinweis zu entfernen
                 if (isGpsActive) {
                     updateStatusDisplay(`🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, false);
+                } else {
+                    updateStatusDisplay("🛰️ Suche GPS...", false);
                 }
             }
         }
@@ -224,9 +225,16 @@
             }
         }
 
+        // Intervall für GPS-Timeout UND Internet-Retry
         setInterval(() => {
+            // 1. GPS Timeout Prüfung
             if (isGpsActive && (Date.now() - lastUpdateTimestamp > 25000)) {
                 setFallback();
+            }
+            
+            // 2. Internet-Retry: Falls noch keine Live-Daten da sind, erneut versuchen
+            if (!isDataLive) {
+                loadData(lastLat, lastLng);
             }
         }, 15000);
 
@@ -235,3 +243,4 @@
     </script>
 </body>
 </html>
+
