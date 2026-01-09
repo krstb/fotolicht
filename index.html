@@ -35,6 +35,7 @@
         #status-bar { 
             text-align: center; font-size: 0.85rem; padding: 8px; margin-bottom: 20px;
             border-radius: 12px; background: #2c2c2e; border: 1px solid #3a3a3c;
+            line-height: 1.4;
         }
         .gps-active { border-color: #28a745 !important; color: #28a745 !important; }
         .day-card { 
@@ -59,6 +60,7 @@
         .label-gold { color: var(--gold); font-weight: bold; }
         .time-range { font-family: 'Courier New', monospace; font-size: 1rem; color: white; font-weight: bold; }
         .coords { font-size: 0.7rem; color: #666; display: block; margin-top: 4px; }
+        .cache-hint { font-size: 0.75rem; color: #aaa; display: block; margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -81,11 +83,22 @@
         let lastLng = initialCoords.lng;
         let isGpsActive = false;
         let lastUpdateTimestamp = 0;
+        let isDataLive = false; // Tracker für Live-Daten
 
         // Falls alter HTML-Content existiert, diesen sofort anzeigen
         if (savedHtml) {
             document.getElementById('forecast').innerHTML = savedHtml;
-            document.getElementById('status-bar').innerHTML = "📦 Daten aus Cache geladen...";
+            updateStatusDisplay("Suche GPS...", true);
+        }
+
+        // Hilfsfunktion für kombinierte Statusanzeige
+        function updateStatusDisplay(mainText, showCacheHint) {
+            const statusDiv = document.getElementById('status-bar');
+            let html = mainText;
+            if (showCacheHint && !isDataLive) {
+                html += `<span class="cache-hint">(Zeige gespeicherte Daten)</span>`;
+            }
+            statusDiv.innerHTML = html;
         }
 
         function fT(dateObj) {
@@ -112,9 +125,7 @@
 
             const results = await Promise.all(fetchPromises);
             
-            // UI-Update vorbereiten
             let newHtml = '';
-            
             results.forEach(dayData => {
                 if (!dayData || !dayData.results) return;
                 
@@ -159,9 +170,15 @@
                     </div>`;
             });
 
-            // UI aktualisieren und Cache füllen
-            div.innerHTML = newHtml;
-            localStorage.setItem('fotolicht_cache_html', newHtml);
+            if (newHtml !== '') {
+                div.innerHTML = newHtml;
+                localStorage.setItem('fotolicht_cache_html', newHtml);
+                isDataLive = true;
+                // Status-Anzeige aktualisieren, um Cache-Hinweis zu entfernen
+                if (isGpsActive) {
+                    updateStatusDisplay(`🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, false);
+                }
+            }
         }
 
         function setFallback() {
@@ -169,8 +186,8 @@
                 isGpsActive = false;
                 lastLat = stdLat;
                 lastLng = stdLng;
-                document.getElementById('status-bar').innerHTML = "⚠️ GPS aus - Stadtbergen aktiv";
                 document.getElementById('status-bar').classList.remove('gps-active');
+                updateStatusDisplay("⚠️ GPS aus - Stadtbergen aktiv", false);
                 loadData(lastLat, lastLng);
             }
         }
@@ -191,7 +208,7 @@
                             localStorage.setItem('fotolicht_coords', JSON.stringify({ lat: lastLat, lng: lastLng }));
 
                             document.getElementById('status-bar').classList.add('gps-active');
-                            document.getElementById('status-bar').innerHTML = `🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`;
+                            updateStatusDisplay(`🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, true);
                             loadData(lastLat, lastLng);
                         }
                         setTimeout(updateLocation, 10000);
@@ -213,7 +230,6 @@
             }
         }, 15000);
 
-        // Erst-Aufruf mit Cache-Werten
         loadData(lastLat, lastLng);
         updateLocation();
     </script>
