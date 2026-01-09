@@ -37,7 +37,6 @@
             border-radius: 12px; background: #2c2c2e; border: 1px solid #3a3a3c;
             line-height: 1.4; transition: all 0.3s ease;
         }
-        /* Layout-Klassen für die Status-Zustände */
         .gps-active { border-color: #28a745 !important; color: #28a745 !important; }
         .gps-fallback { border-color: #dc3545 !important; color: #dc3545 !important; }
 
@@ -87,14 +86,18 @@
         let lastUpdateTimestamp = 0;
         let isDataLive = false; 
 
+        // SOFORTIGE ANZEIGE BEIM START
         if (savedHtml) {
             document.getElementById('forecast').innerHTML = savedHtml;
-            // Falls GPS-Koordinaten im Cache sind, zeigen wir "Suche...", sonst Stadtbergen-Layout
+            // Falls wir Koordinaten im Speicher haben, nutzen wir diese für die Anzeige, aber zeigen noch den roten Fallback-Status bis GPS antwortet
             if (savedCoords) {
-                updateStatusDisplay(`🛰️ Suche GPS... <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, true);
+                updateStatusDisplay(`🔴 GESPEICHERT <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, true);
             } else {
                 updateStatusDisplay(`🔴 STADTBERGEN <span class="coords">${stdLat} / ${stdLng}</span>`, true);
             }
+        } else {
+            // Gar keine Daten vorhanden -> Stadtbergen Standard
+            updateStatusDisplay(`🔴 STADTBERGEN <span class="coords">${stdLat} / ${stdLng}</span>`, false);
         }
 
         function updateStatusDisplay(mainText, showCacheHint) {
@@ -123,20 +126,18 @@
                 const promise = fetch(`https://api.sunrise-sunset.org/json?lat=${lta}&lng=${lgn}&date=${dStr}&formatted=0`)
                     .then(r => r.json())
                     .then(j => ({ label: dayLabel, results: j.results }))
-                    .catch(e => { console.log("API Fehler bei Tag " + i); return null; });
+                    .catch(e => { return null; });
                 
                 fetchPromises.push(promise);
             }
 
             const results = await Promise.all(fetchPromises);
-            
             let newHtml = '';
             let successCount = 0;
 
             results.forEach(dayData => {
                 if (!dayData || !dayData.results) return;
                 successCount++;
-                
                 const s = dayData.results;
                 const sunrise = new Date(s.sunrise);
                 const sunset = new Date(s.sunset);
@@ -184,6 +185,8 @@
                 isDataLive = true;
                 if (isGpsActive) {
                     updateStatusDisplay(`🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, false);
+                } else if (savedCoords) {
+                     updateStatusDisplay(`🔴 GESPEICHERT <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, false);
                 } else {
                     updateStatusDisplay(`🔴 STADTBERGEN <span class="coords">${stdLat} / ${stdLng}</span>`, false);
                 }
@@ -192,12 +195,13 @@
 
         function setFallback() {
             isGpsActive = false;
-            lastLat = stdLat;
-            lastLng = stdLng;
+            lastLat = initialCoords.lat; // Zurück auf den letzten bekannten Ort oder Standard
+            lastLng = initialCoords.lng;
             const sBar = document.getElementById('status-bar');
             sBar.classList.remove('gps-active');
             sBar.classList.add('gps-fallback');
-            updateStatusDisplay(`🔴 STADTBERGEN <span class="coords">${stdLat} / ${stdLng}</span>`, false);
+            const label = (lastLat === stdLat) ? "🔴 STADTBERGEN" : "🔴 GESPEICHERT";
+            updateStatusDisplay(`${label} <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, false);
             loadData(lastLat, lastLng);
         }
 
