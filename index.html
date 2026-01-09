@@ -68,13 +68,25 @@
         <div id="forecast">Lade Daten...</div>
     </div>
 
-        <script>
+    <script>
         const stdLat = 48.3631; 
         const stdLng = 10.8444;
-        let lastLat = stdLat;
-        let lastLng = stdLng;
+
+        // Position und Cache aus LocalStorage laden
+        const savedCoords = localStorage.getItem('fotolicht_coords');
+        const initialCoords = savedCoords ? JSON.parse(savedCoords) : { lat: stdLat, lng: stdLng };
+        const savedHtml = localStorage.getItem('fotolicht_cache_html');
+
+        let lastLat = initialCoords.lat;
+        let lastLng = initialCoords.lng;
         let isGpsActive = false;
         let lastUpdateTimestamp = 0;
+
+        // Falls alter HTML-Content existiert, diesen sofort anzeigen
+        if (savedHtml) {
+            document.getElementById('forecast').innerHTML = savedHtml;
+            document.getElementById('status-bar').innerHTML = "📦 Daten aus Cache geladen...";
+        }
 
         function fT(dateObj) {
             return dateObj.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
@@ -84,7 +96,6 @@
             const div = document.getElementById('forecast');
             const fetchPromises = [];
 
-            // Erstelle alle API-Anfragen gleichzeitig
             for (let i = 0; i < 6; i++) {
                 const date = new Date();
                 date.setDate(date.getDate() + i);
@@ -99,11 +110,10 @@
                 fetchPromises.push(promise);
             }
 
-            // Warte auf alle Ergebnisse
             const results = await Promise.all(fetchPromises);
             
-            // Erst jetzt das UI leeren und in der richtigen Reihenfolge füllen
-            div.innerHTML = '';
+            // UI-Update vorbereiten
+            let newHtml = '';
             
             results.forEach(dayData => {
                 if (!dayData || !dayData.results) return;
@@ -121,7 +131,7 @@
                 const eveningGoldStart = new Date(sunset.getTime() - 50 * 60000);
                 const eveningBlueStart = new Date(sunset.getTime() + 15 * 60000);
 
-                div.innerHTML += `
+                newHtml += `
                     <div class="day-card">
                         <div class="date-header">${dayData.label}</div>
                         <div class="section-title">Vormittag</div>
@@ -148,6 +158,10 @@
                         </div>
                     </div>`;
             });
+
+            // UI aktualisieren und Cache füllen
+            div.innerHTML = newHtml;
+            localStorage.setItem('fotolicht_cache_html', newHtml);
         }
 
         function setFallback() {
@@ -173,6 +187,9 @@
                             lastLat = newLat;
                             lastLng = newLng;
                             isGpsActive = true;
+                            
+                            localStorage.setItem('fotolicht_coords', JSON.stringify({ lat: lastLat, lng: lastLng }));
+
                             document.getElementById('status-bar').classList.add('gps-active');
                             document.getElementById('status-bar').innerHTML = `🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`;
                             loadData(lastLat, lastLng);
@@ -196,9 +213,9 @@
             }
         }, 15000);
 
-        loadData(stdLat, stdLng);
+        // Erst-Aufruf mit Cache-Werten
+        loadData(lastLat, lastLng);
         updateLocation();
     </script>
-
+</body>
 </html>
-
