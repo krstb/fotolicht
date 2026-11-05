@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fotolicht</title>
-    
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icon-192.png"> 
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <meta name="theme-color" content="#000000">
-    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#315074">
+    <meta name="color-scheme" content="dark">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon-192.png">
 
     <script>
@@ -22,58 +21,219 @@
         });
       }
     </script>
-    
+
     <style>
-        html {background-color: #000000 !important;
-              overscroll-behavior-y: none;
+        :root { 
+            --gold: #ffcc00; 
+            --blue: #5599ff; 
+            --bg: #315074; 
+            --card: #1c1c1e; 
         }
-        
-        :root { --gold: #ffcc00; --blue: #5599ff; --bg: #144FBF; --card: #1c1c1e; }
+        html {
+            background-color: var(--bg) !important;
+            overscroll-behavior-y: none;
+        }
         body { 
-            font-family: 'Segoe UI', system-ui, sans-serif; 
-            background: var(--bg); color: #efefef; margin: 0; padding: 0;
-            display: flex; justify-content: center; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg); 
+            color: #efefef; 
+            margin: 0; 
+            padding: 0;
+            display: flex; 
+            justify-content: center; 
+            min-height: 100vh;
         }
-        .container { width: 100%; max-width: 500px; padding: 20px; box-sizing: border-box; }
-        h1 { color: var(--gold); text-align: center; font-size: 1.6rem; margin-bottom: 5px; }
+        .container { 
+            width: 100%; 
+            max-width: 500px; 
+            padding: 20px; 
+            box-sizing: border-box; 
+        }
+        h1 { 
+            color: var(--gold); 
+            text-align: center; 
+            font-size: 1.6rem; 
+            margin-bottom: 5px; 
+        }
         #status-bar { 
-            text-align: center; font-size: 0.85rem; padding: 8px; margin-bottom: 20px;
-            border-radius: 12px; background: #2c2c2e; border: 1px solid #3a3a3c;
-            line-height: 1.4; transition: all 0.3s ease;
+            text-align: center; 
+            font-size: 0.85rem; 
+            padding: 8px; 
+            margin-bottom: 14px;
+            border-radius: 12px; 
+            background: #2c2c2e; 
+            border: 1px solid #3a3a3c;
+            line-height: 1.4; 
+            min-height: 54px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         .gps-active { border-color: #28a745 !important; color: #28a745 !important; }
         .gps-fallback { border-color: #dc3545 !important; color: #dc3545 !important; }
 
+        .day-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 14px;
+            background: #242426;
+            padding: 6px 10px;
+            border-radius: 14px;
+            border: 1px solid #3a3a3c;
+            height: 48px;
+            box-sizing: border-box;
+        }
+        .nav-btn {
+            background: #3a3a3c;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            width: 44px;
+            height: 34px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+        .nav-btn:hover:not(:disabled) {
+            background: #4a4a4e;
+        }
+        .nav-btn:disabled {
+            opacity: 0.25;
+            cursor: not-allowed;
+        }
+        .nav-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 130px;
+        }
+        .today-btn {
+            background: transparent;
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .today-btn.hidden {
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .day-counter {
+            font-size: 0.85rem;
+            color: #bbb;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+
         .day-card { 
-            background: var(--card); border-radius: 16px; padding: 18px; 
-            margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            background: var(--card); 
+            border-radius: 16px; 
+            padding: 18px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+            min-height: 380px;
+            box-sizing: border-box;
         }
         .date-header { 
-            font-weight: bold; color: var(--gold); font-size: 1.1rem;
-            border-bottom: 1px solid #333; margin-bottom: 12px; padding-bottom: 8px; 
+            font-weight: bold; 
+            color: var(--gold); 
+            font-size: 1.2rem;
+            border-bottom: 1px solid #333; 
+            margin-bottom: 12px; 
+            padding-bottom: 8px; 
+            text-align: center;
+            min-height: 1.5em;
         }
         .section-title { 
-            font-size: 0.7rem; color: #888; margin: 15px 0 8px; 
-            text-transform: uppercase; letter-spacing: 1.2px; font-weight: bold;
+            font-size: 0.7rem; 
+            color: #888; 
+            margin: 15px 0 8px; 
+            text-transform: uppercase; 
+            letter-spacing: 1.2px; 
+            font-weight: bold;
         }
         .grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
         .phase { 
-            background: #2c2c2e; padding: 12px; border-radius: 10px; 
-            font-size: 0.9rem; border-left: 4px solid #444;
-            display: flex; justify-content: space-between; align-items: center;
+            background: #2c2c2e; 
+            padding: 12px; 
+            border-radius: 10px; 
+            font-size: 0.9rem; 
+            border-left: 4px solid #444;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            min-height: 46px;
+            box-sizing: border-box;
         }
         .label-blue { color: var(--blue); font-weight: bold; }
         .label-gold { color: var(--gold); font-weight: bold; }
-        .time-range { font-family: 'Courier New', monospace; font-size: 1rem; color: white; font-weight: bold; }
-        .coords { font-size: 0.7rem; color: #666; display: block; margin-top: 4px; }
-        .cache-hint { font-size: 0.75rem; color: #aaa; display: block; margin-top: 2px; }
+        .time-range { 
+            font-family: 'Courier New', monospace; 
+            font-size: 1rem; 
+            color: white; 
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+        .coords { font-size: 0.7rem; color: #888; display: block; margin-top: 4px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📸 Fotolicht</h1>
-        <div id="status-bar" class="gps-fallback">🔴 STADTBERGEN <span class="coords">48.3631 / 10.8444</span></div>
-        <div id="forecast">Lade Daten...</div>
+        <div id="status-bar" class="gps-fallback">
+            <span id="status-text">🔴 STADTBERGEN</span>
+            <span id="status-sub" class="coords">48.3631 / 10.8444</span>
+        </div>
+        
+        <div class="day-nav">
+            <button id="prevBtn" class="nav-btn" onclick="changeDay(-1)" disabled>◀</button>
+            <div class="nav-center">
+                <span id="dayIndicator" class="day-counter">-- / --</span>
+                <button id="todayBtn" class="today-btn hidden" onclick="goToToday()">Heute</button>
+            </div>
+            <button id="nextBtn" class="nav-btn" onclick="changeDay(1)" disabled>▶</button>
+        </div>
+
+        <div class="day-card" id="cardContainer">
+            <div id="dayLabel" class="date-header">Lade Daten...</div>
+            
+            <div class="section-title">Vormittag</div>
+            <div class="grid">
+                <div class="phase" style="border-color: var(--blue)">
+                    <span class="label-blue">🏙️ Blau</span>
+                    <span id="t-m-blue" class="time-range">--:-- - --:--</span>
+                </div>
+                <div class="phase" style="border-color: var(--gold)">
+                    <span class="label-gold">🌅 Gold</span>
+                    <span id="t-m-gold" class="time-range">--:-- - --:--</span>
+                </div>
+            </div>
+
+            <div class="section-title">Nachmittag</div>
+            <div class="grid">
+                <div class="phase" style="border-color: var(--gold)">
+                    <span class="label-gold">🌅 Gold</span>
+                    <span id="t-e-gold" class="time-range">--:-- - --:--</span>
+                </div>
+                <div class="phase" style="border-color: var(--blue)">
+                    <span class="label-blue">🏙️ Blau</span>
+                    <span id="t-e-blue" class="time-range">--:-- - --:--</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -82,7 +242,7 @@
 
         const savedCoords = localStorage.getItem('fotolicht_coords');
         const initialCoords = savedCoords ? JSON.parse(savedCoords) : { lat: stdLat, lng: stdLng };
-        const savedHtml = localStorage.getItem('fotolicht_cache_html');
+        const savedCacheData = localStorage.getItem('fotolicht_cache_days');
 
         let lastLat = initialCoords.lat;
         let lastLng = initialCoords.lng;
@@ -90,35 +250,99 @@
         let lastUpdateTimestamp = 0;
         let isDataLive = false; 
 
-        // SOFORTIGE ANZEIGE BEIM START
-        if (savedHtml) {
-            document.getElementById('forecast').innerHTML = savedHtml;
-            // Falls wir Koordinaten im Speicher haben, nutzen wir diese für die Anzeige, aber zeigen noch den roten Fallback-Status bis GPS antwortet
-            if (savedCoords) {
-                updateStatusDisplay(`🔴 GESPEICHERT <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, true);
-            } else {
-                updateStatusDisplay(`🔴 STADTBERGEN <span class="coords">${stdLat} / ${stdLng}</span>`, true);
-            }
-        } else {
-            // Gar keine Daten vorhanden -> Stadtbergen Standard
-            updateStatusDisplay(`🔴 STADTBERGEN <span class="coords">${stdLat} / ${stdLng}</span>`, false);
-        }
+        let forecastDays = [];
+        let currentDayIndex = 0;
 
-        function updateStatusDisplay(mainText, showCacheHint) {
-            const statusDiv = document.getElementById('status-bar');
-            let html = mainText;
+        const statusText = document.getElementById('status-text');
+        const statusSub = document.getElementById('status-sub');
+        const statusBar = document.getElementById('status-bar');
+        const dayLabelEl = document.getElementById('dayLabel');
+        const tmBlueEl = document.getElementById('t-m-blue');
+        const tmGoldEl = document.getElementById('t-m-gold');
+        const teGoldEl = document.getElementById('t-e-gold');
+        const teBlueEl = document.getElementById('t-e-blue');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const dayIndicator = document.getElementById('dayIndicator');
+        const todayBtn = document.getElementById('todayBtn');
+
+        function updateStatusDisplay(mainText, subText, showCacheHint) {
+            statusText.textContent = mainText;
+            let sub = subText;
             if (showCacheHint && !isDataLive) {
-                html += `<span class="cache-hint">(Zeige gespeicherte Daten)</span>`;
+                sub += ' (gespeichert)';
             }
-            statusDiv.innerHTML = html;
+            statusSub.textContent = sub;
         }
 
         function fT(dateObj) {
             return dateObj.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
         }
 
+        function renderCurrentDay() {
+            if (!forecastDays || forecastDays.length === 0) return;
+
+            if (currentDayIndex < 0) currentDayIndex = 0;
+            if (currentDayIndex >= forecastDays.length) currentDayIndex = forecastDays.length - 1;
+
+            const dayData = forecastDays[currentDayIndex];
+            const s = dayData.results;
+            const sunrise = new Date(s.sunrise);
+            const sunset = new Date(s.sunset);
+            const civilBegin = new Date(s.civil_twilight_begin);
+            const civilEnd = new Date(s.civil_twilight_end);
+
+            const morningGoldStart = new Date(sunrise.getTime() - 15 * 60000);
+            const morningGoldEnd = new Date(sunrise.getTime() + 40 * 60000);
+            const morningBlueEnd = morningGoldStart;
+
+            const eveningGoldStart = new Date(sunset.getTime() - 50 * 60000);
+            const eveningBlueStart = new Date(sunset.getTime() + 15 * 60000);
+
+            dayLabelEl.textContent = dayData.label;
+            tmBlueEl.textContent = `${fT(civilBegin)} - ${fT(morningBlueEnd)}`;
+            tmGoldEl.textContent = `${fT(morningGoldStart)} - ${fT(morningGoldEnd)}`;
+            teGoldEl.textContent = `${fT(eveningGoldStart)} - ${fT(sunset)}`;
+            teBlueEl.textContent = `${fT(eveningBlueStart)} - ${fT(civilEnd)}`;
+
+            prevBtn.disabled = (currentDayIndex === 0);
+            nextBtn.disabled = (currentDayIndex >= forecastDays.length - 1);
+            dayIndicator.textContent = `${currentDayIndex + 1} / ${forecastDays.length}`;
+
+            if (currentDayIndex !== 0) {
+                todayBtn.classList.remove('hidden');
+            } else {
+                todayBtn.classList.add('hidden');
+            }
+        }
+
+        function changeDay(delta) {
+            currentDayIndex += delta;
+            renderCurrentDay();
+        }
+
+        function goToToday() {
+            currentDayIndex = 0;
+            renderCurrentDay();
+        }
+
+        if (savedCacheData) {
+            try {
+                forecastDays = JSON.parse(savedCacheData);
+                renderCurrentDay();
+                if (savedCoords) {
+                    updateStatusDisplay('🔴 GESPEICHERT', `${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}`, true);
+                } else {
+                    updateStatusDisplay('🔴 STADTBERGEN', `${stdLat} / ${stdLng}`, true);
+                }
+            } catch (e) {
+                console.error("Cache-Fehler:", e);
+            }
+        } else {
+            updateStatusDisplay('🔴 STADTBERGEN', `${stdLat} / ${stdLng}`, false);
+        }
+
         async function loadData(lta, lgn) {
-            const div = document.getElementById('forecast');
             const fetchPromises = [];
 
             for (let i = 0; i < 6; i++) {
@@ -130,82 +354,38 @@
                 const promise = fetch(`https://api.sunrise-sunset.org/json?lat=${lta}&lng=${lgn}&date=${dStr}&formatted=0`)
                     .then(r => r.json())
                     .then(j => ({ label: dayLabel, results: j.results }))
-                    .catch(e => { return null; });
+                    .catch(() => null);
                 
                 fetchPromises.push(promise);
             }
 
             const results = await Promise.all(fetchPromises);
-            let newHtml = '';
-            let successCount = 0;
+            const validResults = results.filter(d => d && d.results);
 
-            results.forEach(dayData => {
-                if (!dayData || !dayData.results) return;
-                successCount++;
-                const s = dayData.results;
-                const sunrise = new Date(s.sunrise);
-                const sunset = new Date(s.sunset);
-                const civilBegin = new Date(s.civil_twilight_begin);
-                const civilEnd = new Date(s.civil_twilight_end);
-                
-                const morningGoldStart = new Date(sunrise.getTime() - 15 * 60000);
-                const morningGoldEnd = new Date(sunrise.getTime() + 40 * 60000);
-                const morningBlueEnd = morningGoldStart;
+            if (validResults.length > 0) {
+                forecastDays = validResults;
+                localStorage.setItem('fotolicht_cache_days', JSON.stringify(validResults));
+                renderCurrentDay();
 
-                const eveningGoldStart = new Date(sunset.getTime() - 50 * 60000);
-                const eveningBlueStart = new Date(sunset.getTime() + 15 * 60000);
-
-                newHtml += `
-                    <div class="day-card">
-                        <div class="date-header">${dayData.label}</div>
-                        <div class="section-title">Vormittag</div>
-                        <div class="grid">
-                            <div class="phase" style="border-color: var(--blue)">
-                                <span class="label-blue">🏙️ Blau</span>
-                                <span class="time-range">${fT(civilBegin)} - ${fT(morningBlueEnd)}</span>
-                            </div>
-                            <div class="phase" style="border-color: var(--gold)">
-                                <span class="label-gold">🌅 Gold</span>
-                                <span class="time-range">${fT(morningGoldStart)} - ${fT(morningGoldEnd)}</span>
-                            </div>
-                        </div>
-                        <div class="section-title">Nachmittag</div>
-                        <div class="grid">
-                            <div class="phase" style="border-color: var(--gold)">
-                                <span class="label-gold">🌅 Gold</span>
-                                <span class="time-range">${fT(eveningGoldStart)} - ${fT(sunset)}</span>
-                            </div>
-                            <div class="phase" style="border-color: var(--blue)">
-                                <span class="label-blue">🏙️ Blau</span>
-                                <span class="time-range">${fT(eveningBlueStart)} - ${fT(civilEnd)}</span>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-
-            if (successCount > 0) {
-                div.innerHTML = newHtml;
-                localStorage.setItem('fotolicht_cache_html', newHtml);
                 isDataLive = true;
                 if (isGpsActive) {
-                    updateStatusDisplay(`🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, false);
-                } else if (savedCoords) {
-                     updateStatusDisplay(`🔴 GESPEICHERT <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, false);
+                    updateStatusDisplay('🟢 GPS AKTIV', `${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}`, false);
+                } else if (savedCoords) { 
+                    updateStatusDisplay('🔴 GESPEICHERT', `${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}`, false);
                 } else {
-                    updateStatusDisplay(`🔴 STADTBERGEN <span class="coords">${stdLat} / ${stdLng}</span>`, false);
+                    updateStatusDisplay('🔴 STADTBERGEN', `${stdLat} / ${stdLng}`, false);
                 }
             }
         }
 
         function setFallback() {
             isGpsActive = false;
-            lastLat = initialCoords.lat; // Zurück auf den letzten bekannten Ort oder Standard
+            lastLat = initialCoords.lat;
             lastLng = initialCoords.lng;
-            const sBar = document.getElementById('status-bar');
-            sBar.classList.remove('gps-active');
-            sBar.classList.add('gps-fallback');
+            statusBar.classList.remove('gps-active');
+            statusBar.classList.add('gps-fallback');
             const label = (lastLat === stdLat) ? "🔴 STADTBERGEN" : "🔴 GESPEICHERT";
-            updateStatusDisplay(`${label} <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, false);
+            updateStatusDisplay(label, `${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}`, false);
             loadData(lastLat, lastLng);
         }
 
@@ -224,10 +404,9 @@
                             
                             localStorage.setItem('fotolicht_coords', JSON.stringify({ lat: lastLat, lng: lastLng }));
 
-                            const sBar = document.getElementById('status-bar');
-                            sBar.classList.remove('gps-fallback');
-                            sBar.classList.add('gps-active');
-                            updateStatusDisplay(`🟢 GPS AKTIV <span class="coords">${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}</span>`, true);
+                            statusBar.classList.remove('gps-fallback');
+                            statusBar.classList.add('gps-active');
+                            updateStatusDisplay('🟢 GPS AKTIV', `${lastLat.toFixed(4)} / ${lastLng.toFixed(4)}`, false);
                             loadData(lastLat, lastLng);
                         }
                         setTimeout(updateLocation, 10000);
@@ -257,9 +436,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
